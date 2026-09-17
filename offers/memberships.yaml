@@ -1,31 +1,51 @@
 # Retail-relevant affiliations you may already have and not be using.
 
 - id: alumni-association-retail
-  brand: "Your university's alumni association"
+  brand: Your university's alumni association
   category: meta
-  benefit: "Many alumni associations run their own discount portal (often Abenity or similar) covering retail"
-  eligibility: {has_education: true}
+  benefit: Many alumni associations run their own discount portal (often Abenity or similar)
+    covering retail
+  eligibility:
+    has_education: true
   redemption:
     type: portal_signup
     url: null
-    method: "Search '<university> alumni association benefits'. Usually free; rarely advertised after graduation."
+    method: Search '<university> alumni association benefits'. Usually free; rarely advertised
+      after graduation.
   verification: alumni_records
   confidence: medium
   status: unverified
   last_verified: null
-  notes: "Consistently the most underused category — free to join, and nearly nobody looks after they graduate."
-
+  notes: Consistently the most underused category — free to join, and nearly nobody looks
+    after they graduate.
+  typical_discount_estimate:
+    min_pct: 5
+    max_pct: 15
+  stacks: false
+  friction: once
+  layer: merchant
 - id: costco-retail
   brand: Costco
   category: home
-  benefit: "Member pricing on appliances and furniture, with unusually good warranty terms on electronics"
-  eligibility: {memberships_include: costco}
+  benefit: Member pricing on appliances and furniture, with unusually good warranty terms
+    on electronics
+  eligibility:
+    memberships_include: costco
   redemption:
     type: portal_signup
     url: https://www.costco.com/
-    method: "Member login"
+    method: Member login
   verification: membership
   confidence: high
   status: unverified
   last_verified: null
-  notes: "For electronics the extended warranty and return window are often worth more than the price difference. Relevant to the same purchases as the Dell/Samsung EPP entries — compare them directly."
+  notes: For electronics the extended warranty and return window are often worth more than
+    the price difference. Relevant to the same purchases as the Dell/Samsung EPP entries —
+    compare them directly.
+  typical_discount_estimate:
+    min_pct: 5
+    max_pct: 20
+  stacks: false
+  friction: none
+  exclusions: Warranty and return terms often worth more than the price gap
+  layer: merchant

@@ -4,60 +4,91 @@
 # become one click each instead of one signup each.
 
 - id: idme-verification
-  brand: "ID.me (verification provider)"
+  brand: ID.me (verification provider)
   category: meta
-  benefit: "One verified identity unlocks military, veteran, first responder, medical, teacher, and student pricing across many retailers"
-  eligibility: {profession_in: [military, first_responder, healthcare, teacher, student]}
+  benefit: One verified identity unlocks military, veteran, first responder, medical, teacher,
+    and student pricing across many retailers
+  eligibility:
+    profession_in:
+    - military
+    - first_responder
+    - healthcare
+    - teacher
+    - student
   redemption:
     type: identity_verification
     url: https://www.id.me/
-    method: "Verify once with documentation; reuse at any participating merchant"
+    method: Verify once with documentation; reuse at any participating merchant
   verification: identity_provider
   confidence: high
   status: unverified
   last_verified: null
-  notes: "Their shop directory doubles as a free discovery tool — it lists which merchants accept the verification, which is exactly the dataset this repo is trying to build. Mine it."
-
+  notes: Their shop directory doubles as a free discovery tool — it lists which merchants
+    accept the verification, which is exactly the dataset this repo is trying to build. Mine
+    it.
+  enabler: true
+  stacks: false
+  friction: once
 - id: sheerid-verification
-  brand: "SheerID (verification provider)"
+  brand: SheerID (verification provider)
   category: meta
-  benefit: "Backs most 'student/military/teacher/nurse' retail discounts; verification is per-merchant but reuses your details"
-  eligibility: {profession_in: [military, first_responder, healthcare, teacher, student, outdoor_industry]}
+  benefit: Backs most 'student/military/teacher/nurse' retail discounts; verification is per-merchant
+    but reuses your details
+  eligibility:
+    profession_in:
+    - military
+    - first_responder
+    - healthcare
+    - teacher
+    - student
+    - outdoor_industry
   redemption:
     type: identity_verification
     url: https://www.sheerid.com/shoppers/
-    method: "Verification happens inside each merchant's checkout flow"
+    method: Verification happens inside each merchant's checkout flow
   verification: identity_provider
   confidence: high
   status: unverified
   last_verified: null
-  notes: "No single login like ID.me, but their shopper directory lists participating brands — another ready-made source for growing this corpus."
-
+  notes: No single login like ID.me, but their shopper directory lists participating brands
+    — another ready-made source for growing this corpus.
+  enabler: true
+  stacks: false
+  friction: once
 - id: unidays-verification
-  brand: "UNiDAYS (verification provider)"
+  brand: UNiDAYS (verification provider)
   category: meta
-  benefit: "Student verification across a large apparel and electronics catalog"
-  eligibility: {is_student: true}
+  benefit: Student verification across a large apparel and electronics catalog
+  eligibility:
+    is_student: true
   redemption:
     type: identity_verification
     url: https://www.myunidays.com/
-    method: "Verify student status once; browse their catalog"
+    method: Verify student status once; browse their catalog
   verification: identity_provider
   confidence: high
   status: unverified
   last_verified: null
-  notes: "Staff and faculty at schools sometimes qualify too, not only enrolled students."
-
+  notes: Staff and faculty at schools sometimes qualify too, not only enrolled students.
+  enabler: true
+  stacks: false
+  friction: once
 - id: govx-verification
-  brand: "GOVX (verification provider + retailer)"
+  brand: GOVX (verification provider + retailer)
   category: meta
-  benefit: "Military, first responder, and government member pricing; also sells direct"
-  eligibility: {profession_in: [military, first_responder]}
+  benefit: Military, first responder, and government member pricing; also sells direct
+  eligibility:
+    profession_in:
+    - military
+    - first_responder
   redemption:
     type: identity_verification
     url: https://www.govx.com/
-    method: "Free account with verification"
+    method: Free account with verification
   verification: identity_provider
   confidence: medium
   status: unverified
   last_verified: null
+  enabler: true
+  stacks: false
+  friction: once

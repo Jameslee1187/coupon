@@ -5,40 +5,57 @@
 # it stacks with sales and coupons because it's payment, not a discount.
 
 - id: platform-discounted-gift-cards
-  brand: "Target / Best Buy / Home Depot / Lowe's / Macy's / Nordstrom and similar"
+  brand: Target / Best Buy / Home Depot / Lowe's / Macy's / Nordstrom and similar
   category: meta
-  benefit: "Gift cards at a few percent below face value through your perk platform"
-  eligibility: {has_perk_platform: true}
+  benefit: Gift cards at a few percent below face value through your perk platform
+  eligibility:
+    has_perk_platform: true
   redemption:
     type: platform_catalog
     url: null
-    method: "Look for 'gift cards' or 'instant savings' in your perk platform, not the brand's own site"
+    method: Look for 'gift cards' or 'instant savings' in your perk platform, not the brand's
+      own site
   verification: employer_enrollment
   confidence: high
   status: unverified
   last_verified: null
-  notes: >
-    The discount is small but it is the only channel that touches retailers with
-    no employee program, and it STACKS — you're changing how you pay, not asking
-    for a discount. Worth it on planned large purchases (appliances, furniture),
-    not on everyday spend where the hassle outweighs a few percent.
+  notes: 'The discount is small but it is the only channel that touches retailers with no
+    employee program, and it STACKS — you''re changing how you pay, not asking for a discount.
+    Worth it on planned large purchases (appliances, furniture), not on everyday spend where
+    the hassle outweighs a few percent.
 
+    '
+  typical_discount_estimate:
+    min_pct: 2
+    max_pct: 10
+  stacks: true
+  friction: per_purchase
+  exclusions: Stacks with everything — it's payment, not a discount
+  layer: payment
 - id: platform-cashback-layer
-  brand: "Your perk platform's own cashback"
+  brand: Your perk platform's own cashback
   category: meta
-  benefit: "Platform-native cashback or points on top of merchant offers"
-  eligibility: {has_perk_platform: true}
+  benefit: Platform-native cashback or points on top of merchant offers
+  eligibility:
+    has_perk_platform: true
   redemption:
     type: platform_catalog
     url: null
-    method: "Click through to the merchant from inside the platform so the visit is attributed"
+    method: Click through to the merchant from inside the platform so the visit is attributed
   verification: employer_enrollment
   confidence: medium
   status: unverified
   last_verified: null
-  notes: >
-    This is the one place your product genuinely overlaps Honey/Rakuten, and it
-    loses on breadth. Its advantage is stacking with the eligibility discounts
-    above, which Rakuten can't reach. Check whether the points are worth face
-    value before counting them — several platforms use a currency worth notably
-    less than a dollar.
+  notes: 'This is the one place your product genuinely overlaps Honey/Rakuten, and it loses
+    on breadth. Its advantage is stacking with the eligibility discounts above, which Rakuten
+    can''t reach. Check whether the points are worth face value before counting them — several
+    platforms use a currency worth notably less than a dollar.
+
+    '
+  typical_discount_estimate:
+    min_pct: 1
+    max_pct: 5
+  stacks: true
+  friction: per_purchase
+  exclusions: Platform currency may be worth under a dollar per point
+  layer: payment

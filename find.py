@@ -81,6 +81,7 @@ def flatten(profile):
         "country": loc.get("country"),
         "state": loc.get("state"),
         "interests": profile.get("interests") or [],
+        "planned_purchases": profile.get("planned_purchases") or [],
     }
 
 
@@ -114,9 +115,117 @@ def confidence_marker(offer):
     }.get(offer.get("confidence"), "[?]")
 
 
+def pct_range(offer):
+    est = offer.get("typical_discount_estimate") or {}
+    if est.get("min_pct") is None:
+        return None
+    return est["min_pct"], est["max_pct"]
+
+
+def applies_to(offer, purchase):
+    """Payment-layer offers apply to any purchase; merchant offers to their category.
+
+    An optional `brands` list on the purchase narrows merchant offers to vendors
+    you'd actually consider — category alone is coarse (a Logitech discount is
+    not a laptop discount)."""
+    if offer.get("enabler"):
+        return False
+    if offer.get("layer") == "payment":
+        return True
+    if offer.get("category") != purchase.get("category"):
+        return False
+    brands = [b.lower() for b in (purchase.get("brands") or [])]
+    if brands:
+        return any(b in offer["brand"].lower() for b in brands)
+    return True
+
+
+def value_report(eligible, attrs, min_save):
+    purchases = attrs["planned_purchases"]
+    if not purchases:
+        print(f"\n{DIM}No planned_purchases in profile.yaml — add some to see what any of{RESET}")
+        print(f"{DIM}this is actually worth in dollars. A percentage on its own can't tell you.{RESET}")
+        return
+
+    offers = [o for o, _ in eligible]
+    grand_lo = grand_hi = 0.0
+    hidden = 0
+
+    total_planned = sum(float(p.get("est_price", 0)) for p in purchases)
+    print(f"\n{BOLD}What this is worth on what you're actually buying{RESET}")
+    print(f"{DIM}{len(purchases)} planned purchases, ${total_planned:,.0f} total{RESET}")
+
+    for p in purchases:
+        price = float(p.get("est_price", 0))
+        scored = []
+        for o in offers:
+            if not applies_to(o, p):
+                continue
+            rng = pct_range(o)
+            if not rng:
+                continue
+            lo, hi = price * rng[0] / 100, price * rng[1] / 100
+            if hi < min_save:
+                hidden += 1
+                continue
+            scored.append((o, lo, hi))
+
+        label = p.get('item', '(unnamed)')
+        narrowed = f" · {', '.join(p['brands'])}" if p.get("brands") else ""
+        print(f"\n  {BOLD}{label}{RESET}  {DIM}${price:,.0f} · {p.get('category','?')}{narrowed}{RESET}")
+        if not scored:
+            print(f"    {DIM}nothing eligible applies{RESET}")
+            continue
+
+        merchant = [s for s in scored if s[0].get("layer") != "payment"]
+        payment = [s for s in scored if s[0].get("layer") == "payment"]
+        merchant.sort(key=lambda s: -(s[1] + s[2]))
+
+        sub_lo = sub_hi = 0.0
+        if merchant:
+            print(f"    {DIM}pick one vendor:{RESET}")
+            for i, (o, lo, hi) in enumerate(merchant[:4]):
+                mark = "*" if i == 0 else " "
+                fr = o.get("friction", "?")
+                print(f"     {mark} {o['brand'][:36]:<36} ${lo:>6,.0f}-{hi:<6,.0f} {DIM}[{fr}]{RESET}")
+                if i == 0 and o.get("exclusions"):
+                    print(f"       {DIM}! {o['exclusions']}{RESET}")
+            if len(merchant) > 4:
+                print(f"       {DIM}+{len(merchant)-4} more{RESET}")
+            sub_lo, sub_hi = merchant[0][1], merchant[0][2]
+        if payment:
+            print(f"    {DIM}on top, any vendor:{RESET}")
+            for o, lo, hi in sorted(payment, key=lambda s: -(s[1] + s[2])):
+                print(f"       {o['brand'][:36]:<36} ${lo:>6,.0f}-{hi:<6,.0f} {DIM}[{o.get('friction','?')}]{RESET}")
+                sub_lo, sub_hi = sub_lo + lo, sub_hi + hi
+
+        print(f"    {BOLD}-> ${sub_lo:,.0f}-{sub_hi:,.0f}{RESET} {DIM}best case{RESET}")
+        grand_lo, grand_hi = grand_lo + sub_lo, grand_hi + sub_hi
+
+    pct = (grand_hi / total_planned * 100) if total_planned else 0
+    print(f"\n{BOLD}Best case: ${grand_lo:,.0f}-{grand_hi:,.0f}{RESET}"
+          f"  {DIM}({pct:.0f}% of planned spend, top end){RESET}")
+    print(f"{DIM}Assumes you buy from the best-scoring vendor for each item. Switching{RESET}")
+    print(f"{DIM}brands to capture a discount is usually a worse deal than it looks -{RESET}")
+    print(f"{DIM}add `brands:` to a purchase to score only vendors you'd really consider.{RESET}")
+    if hidden:
+        print(f"{DIM}{hidden} offer/purchase pairs below the ${min_save:,.0f} threshold, hidden.{RESET}")
+    print(f"{DIM}Estimates use rough priors, not verified figures. Treat the ordering as{RESET}")
+    print(f"{DIM}signal and the absolute numbers as provisional until you verify entries.{RESET}")
+
+
 def show(offer, attrs):
     print(f"\n  {BOLD}{offer['brand']}{RESET}  {confidence_marker(offer)}")
+    rng = pct_range(offer)
+    if rng:
+        span = f"{rng[0]:g}%" if rng[0] == rng[1] else f"{rng[0]:g}-{rng[1]:g}%"
+        extra = " · stacks" if offer.get("stacks") else ""
+        print(f"    {DIM}est. {span}{extra} · setup: {offer.get('friction','?')}{RESET}")
+    elif offer.get("enabler"):
+        print(f"    {DIM}enabler — no discount itself, unlocks the entries below{RESET}")
     print(f"    {offer.get('benefit', '')}")
+    if offer.get("exclusions"):
+        print(f"    {DIM}exclusions:{RESET} {offer['exclusions']}")
     red = offer.get("redemption") or {}
     if red.get("method"):
         print(f"    {DIM}how:{RESET} {red['method']}")
@@ -194,6 +303,10 @@ def main():
     ap.add_argument("--all", action="store_true", help="also show offers you don't qualify for")
     ap.add_argument("--probe", action="store_true", help="probe for your employer's perk portal")
     ap.add_argument("--category", help="filter: electronics | apparel | home | meta")
+    ap.add_argument("--min-pct", type=float, default=0,
+                    help="hide offers whose top-end discount is below this percent")
+    ap.add_argument("--min-save", type=float, default=0,
+                    help="in the value report, hide offers saving less than this many dollars")
     args = ap.parse_args()
 
     profile = load_profile()
@@ -202,6 +315,17 @@ def main():
     platforms = load_platforms()
     if args.category:
         offers = [o for o in offers if o.get("category") == args.category]
+
+    dropped_by_pct = []
+    if args.min_pct:
+        kept = []
+        for o in offers:
+            rng = pct_range(o)
+            if rng and rng[1] < args.min_pct:
+                dropped_by_pct.append(o)
+            else:
+                kept.append(o)
+        offers = kept
 
     eligible, blocked, dead = [], [], []
     for offer in offers:
@@ -244,6 +368,23 @@ def main():
     if unverified:
         print(f"\n{YELLOW}{unverified} of these are unverified seed data.{RESET} "
               f"As you check them, set last_verified and flip status to 'verified' or 'dead'.")
+
+    value_report(eligible, attrs, args.min_save)
+
+    if dropped_by_pct:
+        lost_lo = lost_hi = 0.0
+        for p in attrs["planned_purchases"]:
+            price = float(p.get("est_price", 0))
+            for o in dropped_by_pct:
+                if applies_to(o, p) and pct_range(o):
+                    lo, hi = pct_range(o)
+                    lost_lo += price * lo / 100
+                    lost_hi += price * hi / 100
+        print(f"\n{YELLOW}--min-pct {args.min_pct:g} hid {len(dropped_by_pct)} offers.{RESET}")
+        if lost_hi:
+            print(f"{DIM}On your planned purchases those were worth ${lost_lo:,.0f}-{lost_hi:,.0f}.{RESET}")
+            print(f"{DIM}Percentage is not value: a stacking 5% on an appliance beats a{RESET}")
+            print(f"{DIM}headline 40% that excludes everything you'd buy.{RESET}")
 
     if args.probe:
         probe_portals(attrs, platforms)

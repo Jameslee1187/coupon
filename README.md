@@ -47,6 +47,47 @@ Williams-Sonoma trade, Patagonia Pro. Eligibility is consistently looser than
 the name implies — contractors, nonprofit staff, part-time instructors, and
 volunteer first responders qualify far more often than they assume.
 
+## "Is a 10% discount even worth it?"
+
+Percentage is the wrong axis. 40% off a $60 hoodie is $24; 15% off a $2,000
+appliance is $300. So the tool scores in **dollars, against purchases you
+already intend to make**:
+
+```yaml
+planned_purchases:
+  - item: "washer/dryer"
+    category: home
+    est_price: 1800
+    brands: [samsung, lowe, home depot]   # optional, and it matters
+```
+
+An offer that touches nothing on that list correctly scores zero. That is the
+point — the coupon industry's actual business model is discounts on things you
+weren't going to buy, and this is the line that keeps that from happening to you.
+
+Two distinctions the scoring depends on:
+
+- **Merchant vs payment layer.** Brand offers are *alternatives* — you buy one
+  laptop from one vendor, so Dell MPP and Samsung EPP never add together. Only
+  payment-layer offers (discounted gift cards, platform cashback) stack on top
+  of whatever vendor you pick.
+- **Setup friction.** `once` amortizes to nothing — verify with ID.me one
+  afternoon and it's free forever after. `per_purchase` costs you every time,
+  and `application` may not be approved at all.
+
+If you want the high-percentage filter anyway, `--min-pct 40` exists, and it
+reports how much estimated value it just discarded so the tradeoff is visible.
+On a typical profile it hides roughly 28 offers to keep 2, and the ones it keeps
+are pro/trade programs — which is a real finding: **nothing else in gated retail
+clears 40%.**
+
+### Known limitation
+
+Categories are coarse. A Logitech discount is not a laptop discount, and without
+a `brands:` list a washer/dryer gets scored against mattress companies. Adding
+brands per purchase fixes it. A proper product would need brand-level taxonomy;
+a POC shouldn't build one before knowing whether the corpus is worth anything.
+
 ## Eligibility is compositional
 
 A profile is a bag of attributes — employer, work email domain, profession,
@@ -63,6 +104,8 @@ python3 find.py                         # what you qualify for
 python3 find.py --category apparel      # electronics | apparel | home | meta
 python3 find.py --all                   # plus what you're missing and why
 python3 find.py --probe                 # guess your employer's hidden portal
+python3 find.py --min-pct 40            # only deep discounts (and what that costs)
+python3 find.py --min-save 25           # hide offers worth under $25 to you
 ```
 
 Needs `pyyaml`, plus `requests` for `--probe`.

@@ -33,3 +33,20 @@ interests:
   - electronics
   - apparel
   - home
+
+# The thing that makes "is this worth it?" answerable.
+# List what you already intend to buy in the next 6-12 months. The report
+# scores offers in dollars against THIS list, so an offer that doesn't touch
+# anything here correctly scores zero — which is the whole point. Do not add
+# things you'd only buy because a discount exists; that is how coupon apps
+# make money and how you lose it.
+planned_purchases:
+  - item: "laptop"
+    category: electronics       # electronics | apparel | home
+    est_price: 1400
+  - item: "winter jacket"
+    category: apparel
+    est_price: 300
+  - item: "washer/dryer"
+    category: home
+    est_price: 1800
