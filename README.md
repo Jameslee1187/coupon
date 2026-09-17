@@ -81,6 +81,18 @@ On a typical profile it hides roughly 28 offers to keep 2, and the ones it keeps
 are pro/trade programs — which is a real finding: **nothing else in gated retail
 clears 40%.**
 
+### Blank fields fail closed
+
+An unfilled profile field looks exactly like genuine ineligibility — you just
+see fewer offers, with no indication why. So the report ends with a **locked**
+section: per blank field, the extra best-case dollars filling it in would add,
+on the purchases you already listed. Fill in what's true before concluding the
+channel is thin for you.
+
+Merchant offers are ranked by **ceiling**, since the figure reported is a best
+case. Ranking by midpoint can select an offer with a lower top end, which is
+both misleading and, when computing unlock deltas, produced inverted ranges.
+
 ### Known limitation
 
 Categories are coarse. A Logitech discount is not a laptop discount, and without

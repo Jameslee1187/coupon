@@ -151,7 +151,80 @@ def applies_to(offer, purchase):
     return True
 
 
-def value_report(eligible, attrs, min_save):
+def best_case(scored):
+    """Best merchant offer (alternatives, pick one) plus all payment-layer offers."""
+    merchant = [s for s in scored if s[0].get("layer") != "payment"]
+    payment = [s for s in scored if s[0].get("layer") == "payment"]
+    lo = hi = 0.0
+    if merchant:
+        # Rank by ceiling: the figure reported is a best case, so the offer with
+        # the highest top end is the right pick. Ranking by midpoint could select
+        # an offer with a LOWER ceiling, which made deltas come out inverted.
+        best = max(merchant, key=lambda s: (s[2], s[1]))
+        lo, hi = best[1], best[2]
+    for _, p_lo, p_hi in payment:
+        lo, hi = lo + p_lo, hi + p_hi
+    return lo, hi
+
+
+def score_against(offers, purchase, min_save=0):
+    price = float(purchase.get("est_price", 0))
+    out = []
+    for o in offers:
+        if not applies_to(o, purchase):
+            continue
+        rng = pct_range(o)
+        if not rng:
+            continue
+        lo, hi = price * rng[0] / 100, price * rng[1] / 100
+        if hi < min_save:
+            continue
+        out.append((o, lo, hi))
+    return out
+
+
+FIELD_LABEL = {
+    "profession": "profession",
+    "has_perk_platform": "employment.perk_platform",
+    "is_student": "student status",
+    "memberships": "memberships",
+    "has_education": "education",
+    "employment_status": "employment.status",
+}
+
+
+def locked_value(blocked, purchases, current):
+    """Per blocking profile attribute, the extra best-case dollars it would unlock.
+
+    Computed as a true delta: re-run best_case with the locked offers merged in
+    and subtract what you already have, so a locked offer that merely beats an
+    alternative you can already use only counts for the difference.
+    """
+    by_field = {}
+    for offer, unmet in blocked:
+        if pct_range(offer) and unmet:
+            by_field.setdefault(unmet[0].split()[0], []).append(offer)
+
+    rows = []
+    for field, offers in by_field.items():
+        lo = hi = 0.0
+        for p in purchases:
+            extra = score_against(offers, p)
+            if not extra:
+                continue
+            cur_lo, cur_hi = current[id(p)]
+            new_lo, new_hi = best_case(current["raw"][id(p)] + extra)
+            d_lo, d_hi = new_lo - cur_lo, new_hi - cur_hi
+            if d_hi <= 0:
+                continue  # unlocking this adds nothing to the ceiling
+            lo += max(0.0, min(d_lo, d_hi))
+            hi += d_hi
+        if hi > 0:
+            rows.append((FIELD_LABEL.get(field, field), len(offers), lo, hi))
+    return sorted(rows, key=lambda r: -r[3])
+
+
+def value_report(eligible, blocked, attrs, min_save):
     purchases = attrs["planned_purchases"]
     if not purchases:
         print(f"\n{DIM}No planned_purchases in profile.yaml — add some to see what any of{RESET}")
@@ -161,6 +234,7 @@ def value_report(eligible, attrs, min_save):
     offers = [o for o, _ in eligible]
     grand_lo = grand_hi = 0.0
     hidden = 0
+    current_totals = {"raw": {}}
 
     total_planned = sum(float(p.get("est_price", 0)) for p in purchases)
     print(f"\n{BOLD}What this is worth on what you're actually buying{RESET}")
@@ -168,18 +242,10 @@ def value_report(eligible, attrs, min_save):
 
     for p in purchases:
         price = float(p.get("est_price", 0))
-        scored = []
-        for o in offers:
-            if not applies_to(o, p):
-                continue
-            rng = pct_range(o)
-            if not rng:
-                continue
-            lo, hi = price * rng[0] / 100, price * rng[1] / 100
-            if hi < min_save:
-                hidden += 1
-                continue
-            scored.append((o, lo, hi))
+        scored = score_against(offers, p, min_save)
+        hidden += len(score_against(offers, p)) - len(scored)
+        current_totals["raw"][id(p)] = scored
+        current_totals[id(p)] = best_case(scored)
 
         label = p.get('item', '(unnamed)')
         narrowed = f" · {', '.join(p['brands'])}" if p.get("brands") else ""
@@ -194,7 +260,7 @@ def value_report(eligible, attrs, min_save):
 
         sub_lo = sub_hi = 0.0
         if merchant:
-            print(f"    {DIM}pick one vendor:{RESET}")
+            print(f"    {DIM}pick one vendor (ranked by ceiling):{RESET}")
             for i, (o, lo, hi) in enumerate(merchant[:4]):
                 mark = "*" if i == 0 else " "
                 fr = o.get("friction", "?")
@@ -206,7 +272,7 @@ def value_report(eligible, attrs, min_save):
             sub_lo, sub_hi = merchant[0][1], merchant[0][2]
         if payment:
             print(f"    {DIM}on top, any vendor:{RESET}")
-            for o, lo, hi in sorted(payment, key=lambda s: -(s[1] + s[2])):
+            for o, lo, hi in sorted(payment, key=lambda s: (-s[2], -s[1])):
                 print(f"       {o['brand'][:36]:<36} ${lo:>6,.0f}-{hi:<6,.0f} {DIM}[{o.get('friction','?')}]{RESET}")
                 sub_lo, sub_hi = sub_lo + lo, sub_hi + hi
 
@@ -219,6 +285,16 @@ def value_report(eligible, attrs, min_save):
     print(f"{DIM}Assumes you buy from the best-scoring vendor for each item. Switching{RESET}")
     print(f"{DIM}brands to capture a discount is usually a worse deal than it looks -{RESET}")
     print(f"{DIM}add `brands:` to a purchase to score only vendors you'd really consider.{RESET}")
+
+    rows = locked_value(blocked, purchases, current_totals)
+    if rows:
+        print(f"\n{BOLD}Locked by blank or unset profile fields{RESET}")
+        print(f"{DIM}What filling each one in would add, on these same purchases:{RESET}")
+        for label, n, lo, hi in rows:
+            print(f"  {label:<26} {n:>2} offers   {GREEN}+${lo:,.0f}-{hi:,.0f}{RESET}")
+        print(f"{DIM}Blank fields fail closed, so an unfilled profile looks identical to{RESET}")
+        print(f"{DIM}genuine ineligibility. Fill in what's true before concluding the{RESET}")
+        print(f"{DIM}channel is thin for you.{RESET}")
     if hidden:
         print(f"{DIM}{hidden} offer/purchase pairs below the ${min_save:,.0f} threshold, hidden.{RESET}")
     print(f"{DIM}Estimates use rough priors, not verified figures. Treat the ordering as{RESET}")
@@ -380,7 +456,7 @@ def main():
         print(f"\n{YELLOW}{unverified} of these are unverified seed data.{RESET} "
               f"As you check them, set last_verified and flip status to 'verified' or 'dead'.")
 
-    value_report(eligible, attrs, args.min_save)
+    value_report(eligible, blocked, attrs, args.min_save)
 
     if dropped_by_pct:
         lost_lo = lost_hi = 0.0
