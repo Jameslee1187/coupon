@@ -1,0 +1,40 @@
+# Copy to watchlist.yaml. What you actually want to buy - keep it SHORT.
+# A watchlist you'd genuinely act on beats a firehose you learn to ignore.
+#
+# target_price is the only rule that works on day one. Statistical rules
+# (all-time-low, percent-below-median) need history to accumulate first -
+# with no history there is no honest way to say whether a price is good.
+
+- id: airpods-max
+  name: "AirPods Max"
+  target_price: 400
+  sources:
+    - type: bestbuy
+      sku: "6373460"          # from the Best Buy product URL
+    - type: keepa
+      asin: "B08PZHYWJS"      # from the Amazon URL /dp/<ASIN>
+
+- id: example-dtc-item
+  name: "Some direct-to-consumer thing"
+  target_price: 120
+  sources:
+    - type: shopify
+      base: "https://www.brand.com"
+      handle: "product-handle"   # the slug in /products/<handle>
+      variant: "Black"           # optional; omit for cheapest available
+
+- id: example-target-item
+  name: "Something at Target"
+  target_price: 60
+  sources:
+    - type: target
+      tcin: "54191097"          # the A-<number> in the Target URL
+
+# Offline smoke test - no network. `python3 watch.py poll` should alert on this.
+- id: selftest
+  name: "Pipeline self-test"
+  target_price: 999999
+  sources:
+    - type: fixture
+      price: 1.23
+      title: "Self test"

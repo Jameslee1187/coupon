@@ -1,0 +1,29 @@
+# Copy to watch-config.yaml (gitignored - it holds API keys).
+
+database: prices.db
+
+# Where alerts go. console | macos | ntfy
+notify: [console, macos]
+
+rules:
+  min_observations: 20      # statistical rules stay off below this
+  pct_below_median: 20      # alert at 20% under the trailing median
+  cooldown_hours: 12        # re-alerts only if the price drops further
+
+# --- credentials -----------------------------------------------------------
+# Best Buy: free key, developer.bestbuy.com
+bestbuy_api_key: ""
+
+# ntfy: any unguessable string. Subscribe to it in the ntfy phone app.
+# Anyone who knows the topic can read your alerts, so don't use your name.
+ntfy_topic: ""
+ntfy_server: "https://ntfy.sh"
+
+# Target: public web key, copied from a redsky request in browser devtools.
+# Rotates periodically; expect to re-grab it.
+target_api_key: ""
+target_store_id: "1771"
+
+# Keepa: paid. The only realistic path to Amazon, and it backfills price
+# history so cold start is solved for Amazon items on day one.
+keepa_api_key: ""

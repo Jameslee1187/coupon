@@ -1,5 +1,11 @@
 # perk-finder
 
+> **Two tools live here.** This one is a reference book: eligibility-gated
+> discount *programs*, static and public. If you're after time-boxed deals —
+> price errors, clearance, flash sales — see **[WATCHER.md](WATCHER.md)**, which
+> monitors a watchlist and alerts you. They compose: the corpus here tells you
+> your floor price, the watcher tells you when the market moves under it.
+
 Finds eligibility-gated retail discounts you qualify for — clothes, electronics,
 home goods. Employee purchase programs, identity-verified pricing, trade
 programs. Not the Honey/Rakuten kind.

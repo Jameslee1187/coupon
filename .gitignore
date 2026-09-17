@@ -4,3 +4,8 @@ profile.yaml
 __pycache__/
 *.pyc
 .venv/
+
+# watcher: API keys and your personal watchlist
+watch-config.yaml
+watchlist.yaml
+prices.db
