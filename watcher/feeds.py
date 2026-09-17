@@ -96,12 +96,27 @@ def match(post, rules):
     includes = [k.lower() for k in (rules.get("include") or [])]
     hit_include = next((k for k in includes if k in title), None)
 
-    max_price = rules.get("max_price")
-    if max_price and post.price is not None and post.price > float(max_price):
-        return None
+    # Two different ceilings. max_price is taste - things above it don't
+    # interest you. max_spend is capital - an alert you cannot fund is noise
+    # however good the deal is, and unfundable alerts are the fastest way to
+    # train someone to ignore the feed.
+    for key in ("max_price", "max_spend"):
+        cap = rules.get(key)
+        if cap and post.price is not None and post.price > float(cap):
+            return None
 
     if hit_signal:
         return f"flagged '{hit_signal}'", "high"
     if hit_include:
         return f"matches '{hit_include}'", "default"
     return None
+
+
+URGENCY_RANK = {"high": 0, "default": 1}
+
+
+def rank(matched):
+    """Order (post, reason, urgency) so that when the noise budget binds, the
+    error-flagged posts survive and the keyword matches are the ones dropped."""
+    return sorted(matched, key=lambda m: (URGENCY_RANK.get(m[2], 9),
+                                          m[0].price if m[0].price is not None else 1e9))

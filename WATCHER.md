@@ -58,6 +58,19 @@ A large share of what gets relayed to X and Discord **originates on Slickdeals
 and a handful of subreddits**, both of which publish RSS with no auth and no ToS
 problem. You trade a minute or two of latency for not risking an account.
 
+### Keeping it quiet enough to keep reading
+
+A feed you mute is worth nothing, so precision beats recall here. Three controls:
+
+- **`max_spend`** — capital, not taste. An alert you can't fund is noise however
+  good the deal is, and unfundable alerts are the fastest way to train yourself
+  to ignore the feed.
+- **`max_alerts_per_day`** — a noise budget. When it binds, error-flagged posts
+  survive and ordinary keyword matches are the ones dropped.
+- **`watch.py mute <term>`** — tune without hand-editing YAML. `--remove` to undo,
+  and `watch.py recent --suppressed` shows what the budget ate so you can catch
+  a false negative.
+
 ### The error-label signal
 
 Those communities tag errors explicitly — "price error", "glitch", "mispriced".
@@ -182,6 +195,11 @@ Sub-minute polling only helps if the source tolerates it — Best Buy rate-limit
 and Keepa bills per token. **60–300s is the sane range** for a small watchlist.
 
 ### Alerts
+
+`telegram` is the best option if you already run a bot: real links, and the
+alerts persist in a chat you can scroll back through. Create one with
+@BotFather, message it once, then read your chat id from
+`https://api.telegram.org/bot<TOKEN>/getUpdates`.
 
 `ntfy` pushes to your phone free with no account: pick an unguessable topic,
 subscribe to it in the ntfy app. Anyone who knows the topic string can read your

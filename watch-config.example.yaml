@@ -2,8 +2,8 @@
 
 database: prices.db
 
-# Where alerts go. console | macos | ntfy
-notify: [console, macos]
+# Where alerts go. console | macos | ntfy | telegram
+notify: [console, telegram]
 
 rules:
   min_observations: 20      # statistical rules stay off below this
@@ -13,6 +13,11 @@ rules:
 # --- credentials -----------------------------------------------------------
 # Best Buy: free key, developer.bestbuy.com
 bestbuy_api_key: ""
+
+# Telegram: create a bot with @BotFather, then send it a message and read your
+# chat id from https://api.telegram.org/bot<TOKEN>/getUpdates
+telegram_token: ""
+telegram_chat_id: ""
 
 # ntfy: any unguessable string. Subscribe to it in the ntfy phone app.
 # Anyone who knows the topic can read your alerts, so don't use your name.
@@ -27,3 +32,10 @@ target_store_id: "1771"
 # Keepa: paid. The only realistic path to Amazon, and it backfills price
 # history so cold start is solved for Amazon items on day one.
 keepa_api_key: ""
+
+# Resale fee rates, used to project margin when you don't supply actual fees.
+fee_rates:
+  ebay: 0.1325
+  amazon: 0.15
+  mercari: 0.10
+  local: 0.0

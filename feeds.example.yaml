@@ -43,4 +43,14 @@ rules:
     - open box
     - used
 
+  # Two different ceilings, both important:
+  # max_price  - taste. Things above this don't interest you.
+  # max_spend  - capital. An alert you can't fund is noise no matter how good
+  #              the deal is, and unfundable alerts are the fastest way to
+  #              train yourself to ignore the feed.
   max_price: 2500
+  max_spend: 250
+
+  # Noise budget. When it binds, error-flagged posts survive and ordinary
+  # keyword matches get dropped - see `watch.py recent --suppressed`.
+  max_alerts_per_day: 12

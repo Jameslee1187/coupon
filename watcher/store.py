@@ -23,7 +23,10 @@ CREATE TABLE IF NOT EXISTS seen (
     uid TEXT PRIMARY KEY,
     feed TEXT NOT NULL,
     title TEXT,
-    first_seen INTEGER NOT NULL
+    first_seen INTEGER NOT NULL,
+    verdict TEXT NOT NULL DEFAULT 'alerted',
+    url TEXT,
+    price REAL
 );
 
 CREATE TABLE IF NOT EXISTS alerts (
@@ -45,6 +48,7 @@ class Store:
         self.db.row_factory = sqlite3.Row
         self.db.executescript(SCHEMA)
         self.db.commit()
+        self._ensure_columns()
         ledger.init(self.db)
         self.migrated = ledger.migrate_outcomes(self.db)
         self.fresh = first
@@ -82,7 +86,32 @@ class Store:
             (item_id, cutoff)).fetchone()
         return r["lowest"] is not None and price >= r["lowest"]
 
-    def is_new(self, uid, feed, title):
+    def _ensure_columns(self):
+        have = {r[1] for r in self.db.execute("PRAGMA table_info(seen)")}
+        for col, decl in (("verdict", "TEXT NOT NULL DEFAULT 'alerted'"),
+                          ("url", "TEXT"), ("price", "REAL")):
+            if col not in have:
+                self.db.execute(f"ALTER TABLE seen ADD COLUMN {col} {decl}")
+        self.db.commit()
+
+    def alerts_today(self):
+        start = int(time.time()) - 86400
+        r = self.db.execute(
+            "SELECT COUNT(*) AS n FROM seen WHERE verdict='alerted' AND first_seen >= ?",
+            (start,)).fetchone()
+        return r["n"]
+
+    def recent_seen(self, limit=40, verdict=None):
+        q = "SELECT * FROM seen"
+        args = []
+        if verdict:
+            q += " WHERE verdict=?"
+            args.append(verdict)
+        q += " ORDER BY first_seen DESC LIMIT ?"
+        args.append(limit)
+        return list(self.db.execute(q, args))
+
+    def is_new(self, uid, feed, title, verdict="alerted", url=None, price=None):
         """Record a feed post and report whether we had not seen it before.
 
         Deduping matters more than it sounds: the same error gets relayed
@@ -92,8 +121,9 @@ class Store:
         if row:
             return False
         self.db.execute(
-            "INSERT INTO seen (uid, feed, title, first_seen) VALUES (?,?,?,?)",
-            (uid, feed, title, int(time.time())))
+            "INSERT INTO seen (uid, feed, title, first_seen, verdict, url, price)"
+            " VALUES (?,?,?,?,?,?,?)",
+            (uid, feed, title, int(time.time()), verdict, url, price))
         self.db.commit()
         return True
 

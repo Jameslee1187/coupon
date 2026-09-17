@@ -108,7 +108,10 @@ def cmd_feeds(args):
     rules = fcfg.get("rules") or {}
     channels = cfg.get("notify") or ["console"]
 
-    total = matched = fresh = 0
+    budget = rules.get("max_alerts_per_day")
+    spent = store.alerts_today() if budget else 0
+
+    total, matched = 0, []
     for feed in fcfg.get("feeds") or []:
         name = feed.get("name") or feed.get("subreddit") or feed.get("url")
         try:
@@ -119,23 +122,70 @@ def cmd_feeds(args):
         total += len(posts)
         for post in posts:
             hit = feedmod.match(post, rules)
-            if not hit:
-                continue
-            matched += 1
-            # Dedupe AFTER matching so the log reflects what qualified, and
-            # record even non-alerting matches so a relay storm stays quiet.
-            if not store.is_new(post.uid, post.feed, post.title):
-                continue
-            fresh += 1
-            reason, urgency = hit
-            flag = f"{RED}!!{RESET}" if urgency == "high" else f"{GREEN}${RESET}"
-            print(f"{flag} {BOLD}{post.title}{RESET}\n   {DIM}{reason} · {post.feed}{RESET}")
-            notify.send(channels, post.title, f"{reason} · {post.feed}", post.url, cfg)
+            if hit:
+                matched.append((post, hit[0], hit[1]))
         if not args.quiet:
             print(f"{DIM}  {name}: {len(posts)} posts{RESET}")
 
+    sent = suppressed = 0
+    for post, reason, urgency in feedmod.rank(matched):
+        over = budget is not None and (spent + sent) >= budget
+        verdict = "over_budget" if over else "alerted"
+        # Dedupe after matching so the log records what qualified, not what
+        # merely appeared - the same error is relayed across feeds in minutes.
+        if not store.is_new(post.uid, post.feed, post.title, verdict, post.url, post.price):
+            continue
+        if over:
+            suppressed += 1
+            continue
+        sent += 1
+        flag = f"{RED}!!{RESET}" if urgency == "high" else f"{GREEN}${RESET}"
+        print(f"{flag} {BOLD}{post.title}{RESET}\n   {DIM}{reason} · {post.feed}{RESET}")
+        notify.send(channels, post.title, f"{reason} · {post.feed}", post.url, cfg)
+
+    if suppressed:
+        print(f"{YELLOW}{suppressed} more matched but the daily budget of "
+              f"{budget} is spent.{RESET} {DIM}watch.py recent --suppressed{RESET}")
     if not args.quiet:
-        print(f"{DIM}{total} posts, {matched} matched rules, {fresh} new{RESET}")
+        print(f"{DIM}{total} posts, {len(matched)} matched, {sent} alerted{RESET}")
+
+
+def cmd_mute(args):
+    """Add an exclude term without hand-editing YAML - the friction is the point."""
+    path = os.path.join(HERE, "feeds.yaml")
+    if not os.path.exists(path):
+        sys.exit("No feeds.yaml yet.")
+    with open(path) as f:
+        fcfg = yaml.safe_load(f) or {}
+    rules = fcfg.setdefault("rules", {})
+    excl = rules.setdefault("exclude", [])
+    added = [t for t in args.terms if t.lower() not in [e.lower() for e in excl]]
+    if args.remove:
+        keep = [e for e in excl if e.lower() not in [t.lower() for t in args.terms]]
+        removed = len(excl) - len(keep)
+        rules["exclude"] = keep
+        msg = f"unmuted {removed} term(s)"
+    else:
+        excl.extend(added)
+        msg = f"muted: {', '.join(added)}" if added else "already muted"
+    with open(path, "w") as f:
+        yaml.safe_dump(fcfg, f, sort_keys=False, allow_unicode=True)
+    print(f"{msg}\n{DIM}exclude is now: {', '.join(rules.get('exclude') or []) or '(empty)'}{RESET}")
+
+
+def cmd_recent(args):
+    cfg, _, store = load_all()
+    rows = store.recent_seen(args.limit, "over_budget" if args.suppressed else None)
+    if not rows:
+        sys.exit("Nothing recorded yet. Run `watch.py feeds` first.")
+    label = "Suppressed by budget" if args.suppressed else "Recently matched"
+    print(f"{BOLD}{label}{RESET}")
+    for r in rows:
+        when = time.strftime("%m-%d %H:%M", time.localtime(r["first_seen"]))
+        c = GREEN if r["verdict"] == "alerted" else YELLOW
+        price = f"${r['price']:,.2f}" if r["price"] is not None else ""
+        print(f"  {when}  {c}{r['verdict']:<11}{RESET} {price:>10}  {(r['title'] or '')[:58]}")
+    print(f"\n{DIM}Too much noise? watch.py mute <term> [<term>...]{RESET}")
 
 
 def cmd_buy(args):
@@ -417,6 +467,16 @@ def main():
     p.add_argument("--ship", type=float, default=0, help="outbound shipping")
     p.add_argument("--platform")
     p.set_defaults(func=cmd_sold)
+
+    p = sub.add_parser("mute", help="stop alerting on titles containing a term")
+    p.add_argument("terms", nargs="+")
+    p.add_argument("--remove", action="store_true", help="unmute instead")
+    p.set_defaults(func=cmd_mute)
+
+    p = sub.add_parser("recent", help="what matched lately, and what was suppressed")
+    p.add_argument("--limit", type=int, default=40)
+    p.add_argument("--suppressed", action="store_true")
+    p.set_defaults(func=cmd_recent)
 
     sub.add_parser("ledger", help="positions, P&L and honor rates").set_defaults(func=cmd_ledger)
     sub.add_parser("calibrate", help="predicted vs realised resale").set_defaults(func=cmd_calibrate)
