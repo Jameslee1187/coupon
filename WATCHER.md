@@ -34,6 +34,61 @@ the noise of four hundred you didn't.
 Corollary: **keep the watchlist short.** A watchlist you'd genuinely act on
 beats a firehose you learn to ignore within a week.
 
+## Two layers, because a watchlist can't catch an error
+
+A watchlist structurally cannot catch price errors: errors land on SKUs nobody
+predicted. If you'd listed the item in advance you'd be watching a product, not
+hunting a glitch. So there are two commands doing different jobs:
+
+- **`poll`** — watchlist monitoring. Catches real lows on things you want.
+- **`feeds`** — reads public deal feeds and alerts on posts flagged as errors,
+  plus anything matching your keywords. This is the one that catches glitches.
+
+Run both on separate launchd intervals; `feeds` can be slower (2–5 min) since
+you're reading a relay rather than racing to detect.
+
+### Why not Discord and X
+
+Reading a Discord server you don't administer means automating a user account —
+a "self-bot" — which violates Discord's ToS and gets accounts banned. A bot
+account only works in servers that permit bots and where you can add one. X's
+API is now $100+/month for a tier that would do this, and Nitter is dead.
+
+A large share of what gets relayed to X and Discord **originates on Slickdeals
+and a handful of subreddits**, both of which publish RSS with no auth and no ToS
+problem. You trade a minute or two of latency for not risking an account.
+
+### The error-label signal
+
+Those communities tag errors explicitly — "price error", "glitch", "mispriced".
+Matching on those labels is unusually high precision, and it fires regardless of
+your keyword list, because a 90%-off *anything* is worth knowing about even if
+you'd never have thought to watch it.
+
+## Price errors get cancelled
+
+The headline discount on a price error is not its expected value. Retailers
+routinely cancel these orders, and most terms of sale reserve the right to —
+a listing is generally an invitation to treat, not a binding offer.
+
+Nobody publishes honest per-retailer honor rates, so log your own:
+
+```bash
+python3 watch.py log "Sony XM5" --retailer bestbuy --paid 27.99 --normal 349
+python3 watch.py resolve 1 shipped      # or: cancelled
+python3 watch.py outcomes
+```
+
+```
+Honor rate by retailer  (resolved orders only)
+  bestbuy          error     1/1 honored (100%)   realised $321 of $321 nominal
+  target           error     0/2 honored (0%)     realised $0 of $1,537 nominal
+```
+
+After a dozen orders this tells you which retailers are worth acting on fast and
+which will waste your time — which is information the deal accounts never give
+you, because a cancelled order is invisible in their engagement numbers.
+
 ## Cold start
 
 A fresh watchlist has no price history, so "is this cheap?" is unanswerable.

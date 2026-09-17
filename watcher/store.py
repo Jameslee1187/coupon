@@ -17,6 +17,28 @@ CREATE TABLE IF NOT EXISTS observations (
 );
 CREATE INDEX IF NOT EXISTS idx_obs_item ON observations(item_id, seen_at);
 
+CREATE TABLE IF NOT EXISTS seen (
+    uid TEXT PRIMARY KEY,
+    feed TEXT NOT NULL,
+    title TEXT,
+    first_seen INTEGER NOT NULL
+);
+
+-- Price errors are frequently cancelled after you order, so the headline
+-- discount is not the expected value. Nobody publishes honest per-retailer
+-- honor rates; logging your own is the only way to know.
+CREATE TABLE IF NOT EXISTS outcomes (
+    id INTEGER PRIMARY KEY,
+    what TEXT NOT NULL,
+    retailer TEXT NOT NULL,
+    paid REAL NOT NULL,
+    normal_price REAL,
+    kind TEXT NOT NULL DEFAULT 'error',
+    outcome TEXT NOT NULL DEFAULT 'pending',
+    ordered_at INTEGER NOT NULL,
+    notes TEXT
+);
+
 CREATE TABLE IF NOT EXISTS alerts (
     id INTEGER PRIMARY KEY,
     item_id TEXT NOT NULL,
@@ -70,6 +92,37 @@ class Store:
             "SELECT MIN(price) AS lowest FROM alerts WHERE item_id=? AND sent_at >= ?",
             (item_id, cutoff)).fetchone()
         return r["lowest"] is not None and price >= r["lowest"]
+
+    def is_new(self, uid, feed, title):
+        """Record a feed post and report whether we had not seen it before.
+
+        Deduping matters more than it sounds: the same error gets relayed
+        across several feeds within minutes, and an alert stream that repeats
+        itself is one you stop reading."""
+        row = self.db.execute("SELECT 1 FROM seen WHERE uid=?", (uid,)).fetchone()
+        if row:
+            return False
+        self.db.execute(
+            "INSERT INTO seen (uid, feed, title, first_seen) VALUES (?,?,?,?)",
+            (uid, feed, title, int(time.time())))
+        self.db.commit()
+        return True
+
+    def log_outcome(self, what, retailer, paid, normal_price, kind, notes):
+        cur = self.db.execute(
+            "INSERT INTO outcomes (what, retailer, paid, normal_price, kind, ordered_at, notes)"
+            " VALUES (?,?,?,?,?,?,?)",
+            (what, retailer, paid, normal_price, kind, int(time.time()), notes))
+        self.db.commit()
+        return cur.lastrowid
+
+    def set_outcome(self, row_id, outcome):
+        cur = self.db.execute("UPDATE outcomes SET outcome=? WHERE id=?", (outcome, row_id))
+        self.db.commit()
+        return cur.rowcount
+
+    def outcomes(self):
+        return list(self.db.execute("SELECT * FROM outcomes ORDER BY ordered_at DESC"))
 
     def log_alert(self, item_id, source, price, rule):
         self.db.execute(

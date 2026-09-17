@@ -1,0 +1,46 @@
+# Copy to feeds.yaml. Public deal feeds - no auth, no ToS problem.
+# Much of what gets relayed to X and Discord originates here; you trade a
+# minute or two of latency for not risking an account ban.
+
+feeds:
+  - name: slickdeals-frontpage
+    type: rss
+    url: https://feeds.slickdeals.net/slickdeals/frontpage
+
+  - name: buildapcsales
+    type: reddit
+    subreddit: buildapcsales
+
+  - name: deals
+    type: reddit
+    subreddit: deals
+
+rules:
+  # Community error labels. The highest-precision signal available: these
+  # communities tag errors explicitly, and a 90%-off anything is worth waking
+  # for whether or not you'd ever have put it on a list.
+  error_signals:
+    - "price error"
+    - "pricing error"
+    - "glitch"
+    - "mispriced"
+    - "possible error"
+
+  # Things you'd actually buy. Matched case-insensitively against the title.
+  include:
+    - airpods
+    - macbook
+    - sony wh-1000
+    - lg c3
+    - lg c4
+    - dyson
+    - nintendo switch
+
+  # Noise. "Made for outlet" goods are cheap because they're a worse product.
+  exclude:
+    - refurb
+    - "for parts"
+    - open box
+    - used
+
+  max_price: 2500
