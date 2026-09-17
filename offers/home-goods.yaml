@@ -1,0 +1,136 @@
+# HOME GOODS — split between identity-gated retail discounts and TRADE programs.
+# Trade programs are the underused half: they're aimed at designers and
+# contractors, the discounts are deep, and eligibility is often looser than the
+# name suggests.
+
+- id: home-depot-military
+  brand: Home Depot
+  category: home
+  benefit: "Military discount on eligible purchases, with an annual cap"
+  eligibility: {profession_in: [military]}
+  redemption:
+    type: identity_verification
+    url: https://www.homedepot.com/c/Military_Discount
+    method: "Enroll once; discount attaches to your account at checkout"
+  verification: identity_provider
+  confidence: high
+  status: unverified
+  last_verified: null
+
+- id: lowes-military
+  brand: "Lowe's"
+  category: home
+  benefit: "Military discount on eligible purchases"
+  eligibility: {profession_in: [military]}
+  redemption:
+    type: identity_verification
+    url: https://www.lowes.com/l/military-discount.html
+    method: "MyLowe's account enrollment with verification"
+  verification: identity_provider
+  confidence: high
+  status: unverified
+  last_verified: null
+
+- id: wayfair-professional
+  brand: Wayfair
+  category: home
+  benefit: "Wayfair Professional — trade pricing, free membership"
+  eligibility: {profession_in: [design_trade]}
+  redemption:
+    type: application
+    url: https://www.wayfair.com/professional
+    method: "Free signup; business/trade affiliation asked for but lightly checked"
+  verification: self_declared
+  confidence: medium
+  status: unverified
+  last_verified: null
+  notes: "Eligibility is broader than 'interior designer' — contractors, property managers, and small-business buyers qualify. Verify what they actually require before assuming you don't."
+
+- id: williams-sonoma-trade
+  brand: "Williams-Sonoma / Pottery Barn / West Elm"
+  category: home
+  benefit: "Trade program discount across the brand family"
+  eligibility: {profession_in: [design_trade]}
+  redemption:
+    type: application
+    url: https://www.wsgifts.com/trade
+    method: "Trade application with business documentation"
+  verification: manual_review
+  confidence: medium
+  status: unverified
+  last_verified: null
+  notes: "One application covers several brands — better effort-to-coverage ratio than applying per-brand."
+
+- id: crate-barrel-trade
+  brand: "Crate & Barrel / CB2"
+  category: home
+  benefit: "Trade program discount"
+  eligibility: {profession_in: [design_trade]}
+  redemption:
+    type: application
+    url: https://www.crateandbarrel.com/trade/
+    method: "Trade application"
+  verification: manual_review
+  confidence: medium
+  status: unverified
+  last_verified: null
+
+- id: ikea-family
+  brand: IKEA
+  category: home
+  benefit: "IKEA Family — free membership with member pricing; separate business program"
+  eligibility: {}
+  redemption:
+    type: portal_signup
+    url: https://www.ikea.com/us/en/ikea-family/
+    method: "Free signup, no verification"
+  verification: none
+  confidence: high
+  status: unverified
+  last_verified: null
+  notes: "Not eligibility-gated at all, so arguably out of scope — included because it's free, takes a minute, and is the baseline any IKEA purchase should clear."
+
+- id: mattress-brands-verified
+  brand: "Casper / Purple / Saatva / Helix"
+  category: home
+  benefit: "Military, first responder, teacher, nurse discounts"
+  eligibility: {profession_in: [military, first_responder, healthcare, teacher]}
+  redemption:
+    type: identity_verification
+    url: null
+    method: "SheerID or ID.me at checkout"
+  verification: identity_provider
+  confidence: medium
+  status: unverified
+  last_verified: null
+  notes: "Direct-to-consumer mattress brands discount aggressively and stack verification discounts on top of sales more often than apparel does. Worth checking at purchase time."
+
+- id: samsung-appliances-epp
+  brand: Samsung Home Appliances
+  category: home
+  benefit: "EPP covers appliances, not just electronics"
+  eligibility: {employment_status: employed}
+  redemption:
+    type: portal_signup
+    url: https://www.samsung.com/us/shop/employee-program/
+    method: "Same work-email EPP registration as electronics"
+  verification: work_email_domain
+  confidence: medium
+  status: unverified
+  last_verified: null
+  notes: "Same registration as the electronics entry — one signup, two categories. Appliance margins are bigger, so the absolute savings can be larger here."
+
+- id: dyson-refurb-corporate
+  brand: Dyson
+  category: home
+  benefit: "Corporate pricing via perk platforms; refurbished store open to everyone"
+  eligibility: {}
+  redemption:
+    type: platform_catalog
+    url: https://www.dyson.com/outlet
+    method: "Check your perk platform; otherwise the outlet/refurb store"
+  verification: employer_enrollment
+  confidence: medium
+  status: unverified
+  last_verified: null
+  notes: "The refurbished outlet usually beats any corporate discount, and needs no eligibility at all. Check it first."

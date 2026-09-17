@@ -1,0 +1,145 @@
+# ELECTRONICS — the one retail category where employer EPPs are still strong.
+# Most of these verify a work email domain and work for nearly any employer.
+
+- id: dell-mpp
+  brand: Dell
+  category: electronics
+  benefit: "Member Purchase Program pricing on consumer PCs, monitors, accessories; often stacks with site sales"
+  eligibility: {employment_status: employed}
+  redemption:
+    type: portal_signup
+    url: https://www.dell.com/en-us/shop/dell-member-purchase-program/cp/mpp
+    method: "Register with work email; discount attaches to your account"
+  verification: work_email_domain
+  confidence: high
+  status: unverified
+  last_verified: null
+  notes: "Monitors are usually the best value here; laptop 'discounts' often just match public sale pricing. Compare against the plain retail page before believing the member price."
+
+- id: samsung-epp
+  brand: Samsung
+  category: electronics
+  benefit: "Employee Purchase Program on phones, TVs, monitors, appliances"
+  eligibility: {employment_status: employed}
+  redemption:
+    type: portal_signup
+    url: https://www.samsung.com/us/shop/employee-program/
+    method: "Verify work email; some employers pre-enrolled, others accept any verified domain"
+  verification: work_email_domain
+  confidence: high
+  status: unverified
+  last_verified: null
+  notes: "Historically one of the deepest EPPs in electronics, and it covers home appliances too — overlaps your home-goods interest."
+
+- id: lenovo-epp
+  brand: Lenovo
+  category: electronics
+  benefit: "Employee purchase storefront, separate pricing from retail"
+  eligibility: {employment_status: employed}
+  redemption:
+    type: portal_signup
+    url: https://www.lenovo.com/us/en/employee-purchase-program/
+    method: "Company store lookup by employer name or work email"
+  verification: work_email_domain
+  confidence: medium
+  status: unverified
+  last_verified: null
+
+- id: hp-epp
+  brand: HP
+  category: electronics
+  benefit: "Employee purchase program storefront"
+  eligibility: {employment_status: employed}
+  redemption:
+    type: portal_signup
+    url: https://www.hp.com/us-en/shop/slp/employee-purchase-program
+    method: "Work email verification"
+  verification: work_email_domain
+  confidence: medium
+  status: unverified
+  last_verified: null
+
+- id: apple-epp
+  brand: Apple
+  category: electronics
+  benefit: "Employee Purchase Plan pricing — only if your employer is enrolled"
+  eligibility: {employment_status: employed}
+  redemption:
+    type: employer_enrollment
+    url: https://www.apple.com/shop/browse/home/eppstore
+    method: "Requires an employer-specific EPP store link, usually posted on the HR intranet"
+  verification: employer_enrollment
+  confidence: medium
+  status: unverified
+  last_verified: null
+  notes: "Unlike Dell/Samsung, there's no generic work-email path — your employer is enrolled or it isn't. The education store is open to more people and sometimes prices better."
+
+- id: apple-education
+  brand: Apple
+  category: electronics
+  benefit: "Education pricing on Macs and iPads; periodic gift-card promos"
+  eligibility: {is_student: true}
+  redemption:
+    type: identity_verification
+    url: https://www.apple.com/us-edu/store
+    method: "UNiDAYS verification"
+  verification: identity_provider
+  confidence: high
+  status: unverified
+  last_verified: null
+  notes: "Also open to teachers and staff at any level of school, not just university students — an eligibility edge many people miss."
+
+- id: logitech-corporate
+  brand: Logitech
+  category: electronics
+  benefit: "Corporate/employee store pricing on peripherals"
+  eligibility: {employment_status: employed}
+  redemption:
+    type: portal_signup
+    url: https://www.logitech.com/en-us/promo/employee-purchase-program.html
+    method: "Work email verification"
+  verification: work_email_domain
+  confidence: low
+  status: unverified
+  last_verified: null
+
+- id: bose-epp
+  brand: Bose
+  category: electronics
+  benefit: "Employee/corporate purchase pricing on audio"
+  eligibility: {employment_status: employed}
+  redemption:
+    type: portal_signup
+    url: https://www.bose.com/
+    method: "Usually reached through a perk platform rather than direct"
+  verification: employer_enrollment
+  confidence: low
+  status: unverified
+  last_verified: null
+  notes: "Bose has restructured its discount programs repeatedly. Check the refurbished store too — often beats any discount."
+
+- id: garmin-corporate
+  brand: Garmin
+  category: electronics
+  benefit: "Corporate/employee pricing"
+  eligibility: {has_perk_platform: true}
+  redemption:
+    type: platform_catalog
+    url: null
+    method: "Search Garmin inside your perk platform"
+  verification: employer_enrollment
+  confidence: low
+  status: unverified
+  last_verified: null
+
+- id: microsoft-hup
+  brand: Microsoft
+  category: electronics
+  benefit: "Home Use Program — discounted Office/365 for employees"
+  eligibility: {employment_status: employed}
+  redemption: {type: discontinued, url: null, method: null}
+  verification: work_email_domain
+  confidence: high
+  status: discontinued
+  last_verified: null
+  notes: "DEAD. Listed so you don't spend an afternoon on it. Some employers now hand out M365 seats directly instead — ask IT, not HR."

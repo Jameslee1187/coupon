@@ -59,10 +59,18 @@ def flatten(profile):
     """Profile -> flat attribute dict the eligibility predicates read."""
     emp = profile.get("employment") or {}
     edu = profile.get("education") or []
-    mil = profile.get("military") or {}
     loc = profile.get("location") or {}
+    is_student = (
+        emp.get("status") == "student"
+        or profile.get("profession") == "student"
+        or any(e.get("status") == "current_student" for e in edu)
+    )
     return {
         "employment_status": emp.get("status"),
+        "profession": profile.get("profession", "none"),
+        "is_student": is_student,
+        "has_perk_platform": bool(emp.get("perk_platform")),
+        "verified_identities": profile.get("verified_identities") or [],
         "employer": emp.get("employer"),
         "employer_slug": emp.get("employer_slug"),
         "work_email_domain": emp.get("work_email_domain"),
@@ -70,7 +78,6 @@ def flatten(profile):
         "has_work_email": bool(emp.get("work_email_domain")),
         "has_education": bool(edu),
         "memberships": profile.get("memberships") or [],
-        "military_status": mil.get("status", "none"),
         "country": loc.get("country"),
         "state": loc.get("state"),
         "interests": profile.get("interests") or [],
@@ -116,7 +123,7 @@ def show(offer, attrs):
     if red.get("url"):
         print(f"    {DIM}url:{RESET} {red['url']}")
     if offer.get("notes"):
-        print(f"    {DIM}note:{RESET} {offer['notes']}")
+        print(f"    {DIM}note:{RESET} {' '.join(offer['notes'].split())}")
     if offer.get("status") == "unverified":
         print(f"    {DIM}status: unverified — confirm before relying on it{RESET}")
 
@@ -186,16 +193,19 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--all", action="store_true", help="also show offers you don't qualify for")
     ap.add_argument("--probe", action="store_true", help="probe for your employer's perk portal")
+    ap.add_argument("--category", help="filter: electronics | apparel | home | meta")
     args = ap.parse_args()
 
     profile = load_profile()
     attrs = flatten(profile)
     offers = load_offers()
     platforms = load_platforms()
+    if args.category:
+        offers = [o for o in offers if o.get("category") == args.category]
 
     eligible, blocked, dead = [], [], []
     for offer in offers:
-        if offer.get("status") == "discontinued":
+        if offer.get("status") in ("discontinued", "not_accessible"):
             dead.append(offer)
             continue
         ok, unmet = evaluate(offer.get("eligibility"), attrs)
@@ -203,6 +213,7 @@ def main():
 
     interests = attrs["interests"]
     eligible.sort(key=lambda t: (
+        0 if t[0].get("category") == "meta" else 1,
         interests.index(t[0].get("category")) if t[0].get("category") in interests else 99,
         {"high": 0, "medium": 1, "low": 2}.get(t[0].get("confidence"), 3),
     ))
@@ -225,7 +236,9 @@ def main():
             print(f"\n  {offer['brand']}: needs {', '.join(unmet)}")
 
     if dead:
-        print(f"\n{DIM}Known dead, don't chase: {', '.join(o['brand'] for o in dead)}{RESET}")
+        print(f"\n{BOLD}Known dead or out of reach — don't chase{RESET}")
+        for offer in dead:
+            print(f"  {DIM}{offer['brand']}: {offer.get('notes', '')}{RESET}")
 
     unverified = sum(1 for o, _ in eligible if o.get("status") == "unverified")
     if unverified:

@@ -5,27 +5,31 @@ employment:
   status: employed          # employed | self_employed | retired | student | unemployed
   employer: ""              # e.g. "Acme Corp"
   employer_slug: ""         # lowercase, for portal probing. e.g. "acme"
-  work_email_domain: ""     # e.g. "acme.com" — the key that unlocks most of this
-  perk_platform: ""         # if you already know it: perksatwork | perkspot | benefithub |
-                            # lifemart | working_advantage | abenity | fond | "" if unknown
+  work_email_domain: ""     # e.g. "acme.com" — unlocks the electronics EPPs
+  perk_platform: ""         # if known: perksatwork | perkspot | benefithub | lifemart |
+                            # working_advantage | abenity | fond | "" if unknown
+
+# The highest-leverage field in retail. One verified profession unlocks dozens
+# of brands at once. Be generous — eligibility is usually wider than the label
+# suggests (part-time instructors, nonprofit staff, school employees of any
+# kind, volunteer first responders).
+profession: none            # none | military | first_responder | healthcare | teacher |
+                            # student | outdoor_industry | design_trade | fitness_instructor
 
 education:
-  - institution: ""         # alumni benefits are real and almost nobody uses them
+  - institution: ""
     status: alumni          # alumni | current_student
 
-memberships: []             # costco, aaa, aarp, sams_club, credit_union, ymca, alumni_assoc
+memberships: []             # costco, sams_club, aaa, credit_union
 
-military:
-  status: none              # none | active | veteran | reserve | military_family
+verified_identities: []     # which you've already done: idme, sheerid, unidays, govx
 
 location:
   country: US
   state: ""
 
-# Categories you'd actually buy in. Used only to sort the report.
+# Used only to order the report.
 interests:
   - electronics
-  - telecom
-  - travel
-  - fitness
-  - auto
+  - apparel
+  - home

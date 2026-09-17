@@ -1,0 +1,162 @@
+# APPAREL — almost entirely IDENTITY-gated, not employer-gated.
+# Nearly all of these route through SheerID, ID.me, or UNiDAYS. Verifying once
+# with each provider unlocks many brands, so treat the three verifications as
+# the real task and the individual brands as downstream of it.
+
+- id: nike-verified
+  brand: Nike
+  category: apparel
+  benefit: "Percentage off for military, first responders, medical staff, students, teachers"
+  eligibility: {profession_in: [military, first_responder, healthcare, teacher, student]}
+  redemption:
+    type: identity_verification
+    url: https://www.nike.com/help/a/military-discount
+    method: "SheerID verification, then a code issued to your account"
+  verification: identity_provider
+  confidence: high
+  status: unverified
+  last_verified: null
+  notes: "Excluded from sale items and limited-release product, which removes most of the reason you'd want it. Check exclusions before counting on it."
+
+- id: adidas-verified
+  brand: adidas
+  category: apparel
+  benefit: "Discount for students, military, first responders, teachers, medical"
+  eligibility: {profession_in: [military, first_responder, healthcare, teacher, student]}
+  redemption:
+    type: identity_verification
+    url: https://www.adidas.com/us/help/discounts
+    method: "SheerID / UNiDAYS verification"
+  verification: identity_provider
+  confidence: high
+  status: unverified
+  last_verified: null
+
+- id: under-armour-verified
+  brand: Under Armour
+  category: apparel
+  benefit: "Discount for military, first responders, healthcare, teachers, students"
+  eligibility: {profession_in: [military, first_responder, healthcare, teacher, student]}
+  redemption:
+    type: identity_verification
+    url: https://www.underarmour.com/en-us/t/military-discount/
+    method: "ID.me or SheerID verification"
+  verification: identity_provider
+  confidence: high
+  status: unverified
+  last_verified: null
+
+- id: levis-verified
+  brand: "Levi's"
+  category: apparel
+  benefit: "Student and military discount"
+  eligibility: {profession_in: [military, student]}
+  redemption:
+    type: identity_verification
+    url: https://www.levi.com/US/en_US/
+    method: "SheerID verification at checkout"
+  verification: identity_provider
+  confidence: medium
+  status: unverified
+  last_verified: null
+
+- id: lululemon-sweat-collective
+  brand: lululemon
+  category: apparel
+  benefit: "Sweat Collective — meaningful discount for fitness instructors, coaches, trainers, some athletes"
+  eligibility: {profession_in: [fitness_instructor]}
+  redemption:
+    type: application
+    url: https://shop.lululemon.com/story/sweat-collective
+    method: "Application with proof of your teaching/coaching role; approval is not automatic"
+  verification: manual_review
+  confidence: medium
+  status: unverified
+  last_verified: null
+  notes: "One of the deepest apparel discounts that exists, and the eligibility is wider than people assume — part-time instructors and run-club leaders often qualify."
+
+- id: patagonia-pro
+  brand: Patagonia
+  category: apparel
+  benefit: "Pro Program — deep discount for outdoor industry, guides, environmental nonprofit staff, some first responders"
+  eligibility: {profession_in: [outdoor_industry, first_responder]}
+  redemption:
+    type: application
+    url: https://www.patagonia.com/pro/
+    method: "Application with proof of profession; reviewed manually"
+  verification: manual_review
+  confidence: medium
+  status: unverified
+  last_verified: null
+  notes: "'Pro deals' are the single most underused discount class in apparel. Eligibility lists are broad — nonprofit environmental staff, search-and-rescue volunteers, seasonal guides all commonly qualify."
+
+- id: north-face-xplr
+  brand: The North Face
+  category: apparel
+  benefit: "XPLR Pass member pricing; separate pro program for outdoor professionals"
+  eligibility: {profession_in: [outdoor_industry, military, first_responder]}
+  redemption:
+    type: application
+    url: https://www.thenorthface.com/en-us/xplr-pass
+    method: "Free membership; pro program requires application"
+  verification: manual_review
+  confidence: medium
+  status: unverified
+  last_verified: null
+
+- id: columbia-pro
+  brand: Columbia
+  category: apparel
+  benefit: "Pro Purchase Program for outdoor industry and qualifying professions"
+  eligibility: {profession_in: [outdoor_industry, first_responder, military]}
+  redemption:
+    type: application
+    url: https://www.columbia.com/pro-purchase-program.html
+    method: "Application with proof of profession"
+  verification: manual_review
+  confidence: medium
+  status: unverified
+  last_verified: null
+
+- id: carhartt-trade
+  brand: Carhartt
+  category: apparel
+  benefit: "Discounts for trades, military, first responders"
+  eligibility: {profession_in: [design_trade, first_responder, military]}
+  redemption:
+    type: identity_verification
+    url: https://www.carhartt.com/
+    method: "ID.me verification"
+  verification: identity_provider
+  confidence: medium
+  status: unverified
+  last_verified: null
+
+- id: gap-family-brands-student
+  brand: "Gap / Old Navy / Banana Republic / Athleta"
+  category: apparel
+  benefit: "Student discount"
+  eligibility: {is_student: true}
+  redemption:
+    type: identity_verification
+    url: https://www.gap.com/
+    method: "UNiDAYS or SheerID verification"
+  verification: identity_provider
+  confidence: medium
+  status: unverified
+  last_verified: null
+
+- id: brand-employee-store-access
+  brand: "Nike / adidas / Columbia / Under Armour employee stores"
+  category: apparel
+  benefit: "Physical employee stores with very deep discounts"
+  eligibility: {}
+  redemption:
+    type: not_accessible
+    url: null
+    method: "Requires an employee-issued pass. Not obtainable without a genuine connection."
+  verification: employee_pass
+  confidence: high
+  status: not_accessible
+  last_verified: null
+  notes: "Documented as a boundary marker, not a lead. These passes are named, logged, and revocable, and passing one around gets the employee fired. Out of scope by design."
