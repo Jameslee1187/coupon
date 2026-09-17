@@ -1,0 +1,60 @@
+# Dataset 1+2: the perk platforms themselves.
+# `probe` templates are used by find.py to guess whether your employer has a
+# portal you were never told about. {slug} is substituted from your profile.
+
+platforms:
+  - id: perksatwork
+    name: Perks at Work (Next Jump)
+    home: https://www.perksatwork.com/
+    probe: ["https://{slug}.perksatwork.com/"]
+    catalog_notes: "Broad consumer catalog; strong on electronics and travel. Also runs WOWPoints cashback."
+
+  - id: perkspot
+    name: PerkSpot
+    home: https://www.perkspot.com/
+    probe: ["https://{slug}.perkspot.com/"]
+    catalog_notes: "Common at mid-size US employers and retail/healthcare."
+
+  - id: benefithub
+    name: BenefitHub
+    home: https://www.benefithub.com/
+    probe: ["https://www.benefithub.com/{slug}", "https://{slug}.benefithub.com/"]
+    catalog_notes: "Very wide catalog, uneven quality. Usually needs an employer referral code on signup."
+
+  - id: lifemart
+    name: LifeMart (LifeCare)
+    home: https://www.lifecare.com/
+    probe: ["https://{slug}.lifecare.com/"]
+    catalog_notes: "Often bundled with an EAP, so employees never hear about the shopping side."
+
+  - id: working_advantage
+    name: Working Advantage
+    home: https://www.workingadvantage.com/
+    probe: []
+    catalog_notes: "Entertainment-heavy: theme parks, tickets, movies. Related to TicketsatWork."
+
+  - id: abenity
+    name: Abenity
+    home: https://www.abenity.com/
+    probe: ["https://{slug}.abenity.com/"]
+    catalog_notes: "Common at smaller employers, credit unions, and associations."
+
+  - id: fond
+    name: Fond
+    home: https://www.fond.co/
+    probe: []
+    catalog_notes: "Usually deployed as a recognition/rewards tool with perks attached."
+
+# What tends to sit in these catalogs regardless of platform. Use this to know
+# what to go LOOK for once you're inside a portal — the search box is the real
+# interface and the homepage hides most of it.
+common_catalog_categories:
+  - electronics (Dell, Samsung, Apple, Lenovo)
+  - wireless carriers
+  - travel: hotels, car rental, cruises, theme parks
+  - fitness and wellness memberships
+  - insurance: auto/home/pet, often genuinely competitive
+  - cell phone and electronics protection plans
+  - moving and storage
+  - tax prep and financial services
+  - restaurant and retail gift cards at a few percent off face value

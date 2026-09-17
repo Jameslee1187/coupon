@@ -1,0 +1,31 @@
+# Copy to profile.yaml (gitignored) and fill in.
+# Every field is optional — omit what doesn't apply. More detail = more matches.
+
+employment:
+  status: employed          # employed | self_employed | retired | student | unemployed
+  employer: ""              # e.g. "Acme Corp"
+  employer_slug: ""         # lowercase, for portal probing. e.g. "acme"
+  work_email_domain: ""     # e.g. "acme.com" — the key that unlocks most of this
+  perk_platform: ""         # if you already know it: perksatwork | perkspot | benefithub |
+                            # lifemart | working_advantage | abenity | fond | "" if unknown
+
+education:
+  - institution: ""         # alumni benefits are real and almost nobody uses them
+    status: alumni          # alumni | current_student
+
+memberships: []             # costco, aaa, aarp, sams_club, credit_union, ymca, alumni_assoc
+
+military:
+  status: none              # none | active | veteran | reserve | military_family
+
+location:
+  country: US
+  state: ""
+
+# Categories you'd actually buy in. Used only to sort the report.
+interests:
+  - electronics
+  - telecom
+  - travel
+  - fitness
+  - auto

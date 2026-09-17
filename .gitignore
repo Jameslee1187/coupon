@@ -1,0 +1,6 @@
+# Your personal profile stays local — it names your employer and work email domain.
+profile.yaml
+
+__pycache__/
+*.pyc
+.venv/
