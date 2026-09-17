@@ -98,17 +98,31 @@ know about?"**
 ## Use
 
 ```bash
-cp profile.example.yaml profile.yaml    # gitignored; stays local
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install pyyaml requests
+cp profile.example.yaml profile.yaml
 $EDITOR profile.yaml
-python3 find.py                         # what you qualify for
-python3 find.py --category apparel      # electronics | apparel | home | meta
-python3 find.py --all                   # plus what you're missing and why
-python3 find.py --probe                 # guess your employer's hidden portal
-python3 find.py --min-pct 40            # only deep discounts (and what that costs)
-python3 find.py --min-save 25           # hide offers worth under $25 to you
 ```
 
-Needs `pyyaml`, plus `requests` for `--probe`.
+`profile.yaml` is gitignored — your employer and work email domain stay local.
+On macOS it's `python3 -m pip`, not `pip`; the venv also avoids the
+`externally-managed-environment` error a Homebrew Python raises. `requests` is
+only needed for `--probe`.
+
+Then:
+
+```bash
+python3 find.py                  # what you qualify for, scored in dollars
+python3 find.py --category home  # electronics | apparel | home | meta
+python3 find.py --all            # plus what you're missing, and why
+python3 find.py --probe          # guess your employer's hidden perk portal
+python3 find.py --min-pct 40     # deep discounts only, and what that costs you
+python3 find.py --min-save 25    # hide offers worth under $25 to you
+```
+
+Don't paste a trailing `# comment` onto a command in zsh — interactive zsh
+doesn't treat `#` as a comment, so it becomes an argument.
 
 Fill in `profession` generously — it's the single highest-leverage field, and
 the eligibility lists behind it are wider than the labels suggest.

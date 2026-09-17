@@ -16,7 +16,18 @@ import glob
 import os
 import sys
 
-import yaml
+
+try:
+    import yaml
+except ImportError:
+    sys.exit(
+        "PyYAML isn't installed.\n\n"
+        "  python3 -m venv .venv\n"
+        "  source .venv/bin/activate\n"
+        "  python3 -m pip install pyyaml requests\n\n"
+        "On macOS use python3 -m pip, not pip. The venv also avoids the\n"
+        "'externally-managed-environment' error from a Homebrew Python."
+    )
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONTROL_SLUG = "zzq7xkvn-not-a-real-company"
