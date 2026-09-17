@@ -65,31 +65,61 @@ Matching on those labels is unusually high precision, and it fires regardless of
 your keyword list, because a 90%-off *anything* is worth knowing about even if
 you'd never have thought to watch it.
 
-## Price errors get cancelled
+## The ledger
 
-The headline discount on a price error is not its expected value. Retailers
-routinely cancel these orders, and most terms of sale reserve the right to —
-a listing is generally an invitation to treat, not a binding offer.
-
-Nobody publishes honest per-retailer honor rates, so log your own:
+Every purchase gets logged with its cost basis at purchase time, because
+reconstructing basis a year later from bank statements is miserable — and if
+resale ever becomes regular, that's Schedule C and the platforms will issue you
+a 1099-K.
 
 ```bash
-python3 watch.py log "Sony XM5" --retailer bestbuy --paid 27.99 --normal 349
-python3 watch.py resolve 1 shipped      # or: cancelled
-python3 watch.py outcomes
+python3 watch.py buy "Sony XM5" --retailer bestbuy --paid 27.99 --tax 2.40 \
+    --expect 250 --platform ebay --intent resell
+python3 watch.py status 1 received        # or cancelled
+python3 watch.py listed 1 --price 260
+python3 watch.py sold 1 --price 240 --ship 18.50
+python3 watch.py ledger
+python3 watch.py calibrate
 ```
 
+`buy` projects the margin immediately, so you find out at order time rather than
+at sale time that fees eat the deal:
+
 ```
-Honor rate by retailer  (resolved orders only)
-  bestbuy          error     1/1 honored (100%)   realised $321 of $321 nominal
-  target           error     0/2 honored (0%)     realised $0 of $1,537 nominal
+#1 Sony XM5 x1 from bestbuy
+   cost basis $30.39 (incl tax and inbound shipping)
+   if it resells at $250.00: $186.49 before outbound shipping (est. $33.12 fees)
 ```
 
-After a dozen orders this tells you which retailers are worth acting on fast and
-which will waste your time — which is information the deal accounts never give
-you, because a cancelled order is invisible in their engagement numbers.
+### Three numbers the deal accounts never show you
 
-## Cold start
+**Honor rate.** Price errors get cancelled — terms of sale generally reserve the
+right, since a listing is an invitation to treat rather than a binding offer. So
+the expected value of an error is the discount *times* the honor rate, and that
+varies a lot by retailer. `ledger` accumulates yours. A cancelled order is
+invisible in a deal account's engagement numbers, which is exactly why this has
+to be measured rather than read.
+
+**Annualized return.** A $200 margin on something that sits eight months is
+worse than $40 on something that moves in a week, because the second recycles
+your capital ten times. Margin alone hides this. Holds under a week aren't
+annualized at all — a two-day flip annualizes to tens of thousands of percent,
+which is arithmetically correct and completely useless, since you can't repeat
+it 180 times a year.
+
+**Calibration.** `calibrate` compares what you *expected* an item to resell for
+against what it actually fetched, and tells you your median error:
+
+```
+  median error -19% over 11 sales
+  You are systematically optimistic about resale prices.
+  Discount future estimates by roughly 19% before deciding.
+```
+
+This is the report worth building the rest for. Almost nobody measures it, and
+it's what separates people who make money from people who believe they do.
+
+## Cold start## Cold start
 
 A fresh watchlist has no price history, so "is this cheap?" is unanswerable.
 Handled two ways:

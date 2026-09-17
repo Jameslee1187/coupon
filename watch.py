@@ -6,6 +6,9 @@ short-lived process, and state lives in SQLite.
 
     python3 watch.py poll          one pass over the watchlist
     python3 watch.py feeds         read deal feeds, alert on price errors
+    python3 watch.py buy ...       log a purchase into the ledger
+    python3 watch.py ledger        positions, P&L, honor rates
+    python3 watch.py calibrate     were your resale estimates any good?
     python3 watch.py check         verify each source adapter actually works
     python3 watch.py history <id>  price history for one item
     python3 watch.py test-alert    prove the notification path end to end
@@ -14,6 +17,7 @@ short-lived process, and state lives in SQLite.
 
 import argparse
 import os
+import statistics
 import sys
 import time
 
@@ -28,7 +32,7 @@ except ImportError:
              "  source .venv/bin/activate\n"
              "  python3 -m pip install pyyaml requests\n")
 
-from watcher import feeds as feedmod, notify, sources
+from watcher import feeds as feedmod, ledger, notify, sources
 from watcher.store import Store, evaluate
 
 BOLD, DIM, RESET = "\033[1m", "\033[2m", "\033[0m"
@@ -134,59 +138,153 @@ def cmd_feeds(args):
         print(f"{DIM}{total} posts, {matched} matched rules, {fresh} new{RESET}")
 
 
-def cmd_log(args):
+def cmd_buy(args):
     cfg, _, store = load_all()
-    row = store.log_outcome(args.what, args.retailer, args.paid,
-                            args.normal, args.kind, args.notes)
-    saved = (args.normal - args.paid) if args.normal else None
-    extra = f", nominally saving ${saved:,.2f}" if saved else ""
-    print(f"logged #{row}: {args.what} from {args.retailer} at ${args.paid:,.2f}{extra}")
-    print(f"{DIM}Mark it later:  python3 watch.py resolve {row} shipped|cancelled{RESET}")
+    lot_id = ledger.add(store.db, what=args.what, retailer=args.retailer, kind=args.kind,
+                        intent=args.intent, qty=args.qty, unit_price=args.paid,
+                        tax=args.tax, purchase_ship=args.ship, normal_price=args.normal,
+                        expected_resale=args.expect, notes=args.notes)
+    lot = ledger.get(store.db, lot_id)
+    basis = ledger.cost_basis(lot)
+    print(f"#{lot_id} {args.what} x{args.qty} from {args.retailer}")
+    print(f"   cost basis ${basis:,.2f}{DIM} (incl tax and inbound shipping){RESET}")
+    if args.expect:
+        fees = ledger.estimate_fees(args.platform, args.expect, cfg)
+        proj = args.expect - fees - basis
+        colour = GREEN if proj > 0 else RED
+        print(f"   if it resells at ${args.expect:,.2f}: {colour}${proj:,.2f}{RESET} before outbound"
+              f" shipping{DIM} (est. ${fees:,.2f} fees){RESET}")
+    print(f"{DIM}   next: watch.py status {lot_id} received|cancelled{RESET}")
 
 
-def cmd_resolve(args):
+def cmd_status(args):
     cfg, _, store = load_all()
-    if not store.set_outcome(args.row_id, args.outcome):
-        sys.exit(f"No outcome row #{args.row_id}")
-    print(f"#{args.row_id} -> {args.outcome}")
+    if not ledger.set_status(store.db, args.lot_id, args.status):
+        sys.exit(f"No lot #{args.lot_id}")
+    print(f"#{args.lot_id} -> {args.status}")
 
 
-def cmd_outcomes(args):
+def cmd_listed(args):
     cfg, _, store = load_all()
-    rows = store.outcomes()
-    if not rows:
-        sys.exit("Nothing logged yet. Use `watch.py log` after you order something.")
+    if not ledger.mark_listed(store.db, args.lot_id, args.price, args.platform):
+        sys.exit(f"No lot #{args.lot_id}")
+    print(f"#{args.lot_id} listed at ${args.price:,.2f} on {args.platform}")
 
-    print(f"{BOLD}Orders{RESET}")
-    for r in rows:
+
+def cmd_sold(args):
+    cfg, _, store = load_all()
+    if not ledger.mark_sold(store.db, args.lot_id, args.price, args.fees,
+                            args.ship, args.platform):
+        sys.exit(f"No lot #{args.lot_id}")
+    lot = ledger.get(store.db, args.lot_id)
+    n, ann = ledger.net(lot, cfg), ledger.annualized(lot, cfg)
+    days = ledger.holding_days(lot)
+    colour = GREEN if n and n > 0 else RED
+    est = "" if lot["fees"] is not None else f"{DIM} (fees estimated){RESET}"
+    print(f"#{args.lot_id} sold ${args.price:,.2f} -> net {colour}${n:,.2f}{RESET}{est}")
+    if ann is not None:
+        print(f"   held {days:.0f} days, {ann * 100:,.0f}% annualized on ${ledger.cost_basis(lot):,.2f}")
+    elif days is not None:
+        print(f"   held {days:.0f} days {DIM}(too short to annualize meaningfully){RESET}")
+    if lot["expected_resale"]:
+        delta = args.price - lot["expected_resale"]
+        mark = GREEN if delta >= 0 else YELLOW
+        print(f"   expected ${lot['expected_resale']:,.2f}, got {mark}${delta:+,.2f}{RESET}")
+
+
+def cmd_ledger(args):
+    cfg, _, store = load_all()
+    lots = ledger.all_lots(store.db)
+    if not lots:
+        sys.exit("Nothing logged yet.  watch.py buy \"Thing\" --retailer X --paid N")
+
+    colours = {"sold": GREEN, "cancelled": RED, "returned": RED,
+               "listed": YELLOW, "pending": YELLOW}
+    print(f"{BOLD}Lots{RESET}")
+    for r in lots:
         when = time.strftime("%Y-%m-%d", time.localtime(r["ordered_at"]))
-        colour = {"shipped": GREEN, "cancelled": RED}.get(r["outcome"], YELLOW)
-        print(f"  #{r['id']:<3} {when}  {r['retailer'][:14]:<14} {r['what'][:26]:<26} "
-              f"${r['paid']:>8,.2f}  {colour}{r['outcome']}{RESET}")
+        c = colours.get(r["status"], "")
+        n = ledger.net(r, cfg)
+        tail = f"net {GREEN if n > 0 else RED}${n:,.2f}{RESET}" if n is not None else ""
+        print(f"  #{r['id']:<3} {when}  {r['retailer'][:12]:<12} {r['what'][:24]:<24} "
+              f"${ledger.cost_basis(r):>8,.2f}  {c}{r['status']:<9}{RESET} {tail}")
 
-    print(f"\n{BOLD}Honor rate by retailer{RESET}  {DIM}(resolved orders only){RESET}")
+    open_lots = [r for r in lots if r["status"] in ledger.OPEN_STATES]
+    sold = [r for r in lots if r["status"] == "sold"]
+    cancelled = [r for r in lots if r["status"] == "cancelled"]
+
+    tied = sum(ledger.cost_basis(r) for r in open_lots)
+    print(f"\n{BOLD}Position{RESET}")
+    print(f"  open        {len(open_lots):>3} lots   ${tied:,.2f} tied up")
+    if sold:
+        nets = [ledger.net(r, cfg) for r in sold]
+        anns = [a for a in (ledger.annualized(r, cfg) for r in sold) if a is not None]
+        days = [d for d in (ledger.holding_days(r) for r in sold) if d is not None]
+        total = sum(nets)
+        c = GREEN if total > 0 else RED
+        print(f"  sold        {len(sold):>3} lots   {c}${total:,.2f} net{RESET}"
+              f"   {sum(1 for n in nets if n < 0)} at a loss")
+        if days:
+            line = f"  median hold {statistics.median(days):>3.0f} days"
+            if anns:
+                line += f"   median annualized {statistics.median(anns) * 100:,.0f}%"
+            print(line)
+    if cancelled:
+        resolved = len(sold) + len([r for r in lots if r["status"] in ("received", "kept")]) \
+            + len(cancelled)
+        print(f"  cancelled   {len(cancelled):>3} lots   "
+              f"{DIM}{len(cancelled) / resolved * 100:.0f}% of resolved orders{RESET}")
+
     by = {}
-    for r in rows:
-        if r["outcome"] not in ("shipped", "cancelled"):
+    for r in lots:
+        if r["status"] == "pending":
             continue
         k = (r["retailer"], r["kind"])
-        s, c, realised, nominal = by.get(k, (0, 0, 0.0, 0.0))
-        gain = (r["normal_price"] - r["paid"]) if r["normal_price"] else 0.0
-        if r["outcome"] == "shipped":
-            by[k] = (s + 1, c, realised + gain, nominal + gain)
-        else:
-            by[k] = (s, c + 1, realised, nominal + gain)
+        honored, total_n = by.get(k, (0, 0))
+        by[k] = (honored + (0 if r["status"] == "cancelled" else 1), total_n + 1)
+    if by:
+        print(f"\n{BOLD}Honor rate{RESET}  {DIM}(the discount rate on your whole pipeline){RESET}")
+        for (retailer, kind), (h, n) in sorted(by.items()):
+            print(f"  {retailer[:16]:<16} {kind:<11} {h}/{n}  ({h / n * 100:.0f}%)")
 
-    if not by:
-        print(f"  {DIM}nothing resolved yet - mark orders shipped or cancelled{RESET}")
-        return
-    for (retailer, kind), (s, c, realised, nominal) in sorted(by.items()):
-        n = s + c
-        print(f"  {retailer[:16]:<16} {kind:<9} {s}/{n} honored "
-              f"({s / n * 100:.0f}%)   realised ${realised:,.0f} of ${nominal:,.0f} nominal")
-    print(f"\n{DIM}A cancelled order returns your money, so the cost is the time and the{RESET}")
-    print(f"{DIM}forgone alternative - but the honest figure for a price error is the{RESET}")
-    print(f"{DIM}discount times the honor rate, not the headline discount.{RESET}")
+
+def cmd_calibrate(args):
+    """Predicted resale vs realised. The report that says whether you're good at this."""
+    cfg, _, store = load_all()
+    lots = [r for r in ledger.all_lots(store.db)
+            if r["status"] == "sold" and r["expected_resale"]]
+    if not lots:
+        sys.exit("No sold lots with an --expect figure yet.\n"
+                 "Pass --expect when you buy; this report is the point of it.")
+
+    print(f"{BOLD}Predicted vs realised{RESET}")
+    errs = []
+    for r in lots:
+        exp, got = r["expected_resale"], r["sold_price"]
+        err = (got - exp) / exp * 100
+        errs.append(err)
+        c = GREEN if err >= 0 else YELLOW
+        print(f"  #{r['id']:<3} {r['what'][:26]:<26} expected ${exp:>8,.2f}  got ${got:>8,.2f}"
+              f"  {c}{err:+.0f}%{RESET}")
+
+    med = statistics.median(errs)
+    print(f"\n  median error {med:+.0f}% over {len(errs)} sales")
+    if med < -10:
+        print(f"  {YELLOW}You are systematically optimistic about resale prices.{RESET}")
+        print(f"  {DIM}Discount future estimates by roughly {abs(med):.0f}% before deciding.{RESET}")
+    elif med > 10:
+        print(f"  {DIM}You are systematically pessimistic - you may be passing on good buys.{RESET}")
+    else:
+        print(f"  {DIM}Well calibrated. Your estimates can be trusted as inputs.{RESET}")
+
+    by_kind = {}
+    for r in lots:
+        n = ledger.net(r, cfg)
+        s, tot = by_kind.get(r["kind"], (0, 0.0))
+        by_kind[r["kind"]] = (s + 1, tot + (n or 0))
+    print(f"\n{BOLD}Net by kind{RESET}")
+    for kind, (n, tot) in sorted(by_kind.items(), key=lambda kv: -kv[1][1]):
+        print(f"  {kind:<12} {n:>3} sold   {GREEN if tot > 0 else RED}${tot:,.2f}{RESET}")
 
 
 def cmd_check(args):
@@ -286,21 +384,42 @@ def main():
     p.add_argument("--quiet", action="store_true")
     p.set_defaults(func=cmd_feeds)
 
-    p = sub.add_parser("log", help="record an order you placed")
+    p = sub.add_parser("buy", help="log a purchase")
     p.add_argument("what")
     p.add_argument("--retailer", required=True)
-    p.add_argument("--paid", type=float, required=True)
-    p.add_argument("--normal", type=float, help="normal price, for the nominal saving")
-    p.add_argument("--kind", default="error", help="error | sale | clearance")
+    p.add_argument("--paid", type=float, required=True, help="unit price")
+    p.add_argument("--qty", type=int, default=1)
+    p.add_argument("--tax", type=float, default=0)
+    p.add_argument("--ship", type=float, default=0, help="inbound shipping")
+    p.add_argument("--normal", type=float, help="normal price, for reference")
+    p.add_argument("--expect", type=float, help="what you think it resells for")
+    p.add_argument("--platform", help="where you'd resell, for the fee estimate")
+    p.add_argument("--kind", default="error", help="error | sale | clearance | eligibility")
+    p.add_argument("--intent", default="undecided", choices=["keep", "resell", "undecided"])
     p.add_argument("--notes", default="")
-    p.set_defaults(func=cmd_log)
+    p.set_defaults(func=cmd_buy)
 
-    p = sub.add_parser("resolve", help="mark a logged order shipped or cancelled")
-    p.add_argument("row_id", type=int)
-    p.add_argument("outcome", choices=["shipped", "cancelled", "pending"])
-    p.set_defaults(func=cmd_resolve)
+    p = sub.add_parser("status", help="move a lot to a new state")
+    p.add_argument("lot_id", type=int)
+    p.add_argument("status", choices=ledger.STATES)
+    p.set_defaults(func=cmd_status)
 
-    sub.add_parser("outcomes", help="honor rates by retailer").set_defaults(func=cmd_outcomes)
+    p = sub.add_parser("listed", help="mark a lot listed for sale")
+    p.add_argument("lot_id", type=int)
+    p.add_argument("--price", type=float, required=True)
+    p.add_argument("--platform", default="ebay")
+    p.set_defaults(func=cmd_listed)
+
+    p = sub.add_parser("sold", help="mark a lot sold")
+    p.add_argument("lot_id", type=int)
+    p.add_argument("--price", type=float, required=True)
+    p.add_argument("--fees", type=float, help="actual fees; estimated if omitted")
+    p.add_argument("--ship", type=float, default=0, help="outbound shipping")
+    p.add_argument("--platform")
+    p.set_defaults(func=cmd_sold)
+
+    sub.add_parser("ledger", help="positions, P&L and honor rates").set_defaults(func=cmd_ledger)
+    sub.add_parser("calibrate", help="predicted vs realised resale").set_defaults(func=cmd_calibrate)
 
     sub.add_parser("check", help="verify each source adapter").set_defaults(func=cmd_check)
 

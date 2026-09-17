@@ -5,6 +5,8 @@ import sqlite3
 import statistics
 import time
 
+from watcher import ledger
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS observations (
     id INTEGER PRIMARY KEY,
@@ -22,21 +24,6 @@ CREATE TABLE IF NOT EXISTS seen (
     feed TEXT NOT NULL,
     title TEXT,
     first_seen INTEGER NOT NULL
-);
-
--- Price errors are frequently cancelled after you order, so the headline
--- discount is not the expected value. Nobody publishes honest per-retailer
--- honor rates; logging your own is the only way to know.
-CREATE TABLE IF NOT EXISTS outcomes (
-    id INTEGER PRIMARY KEY,
-    what TEXT NOT NULL,
-    retailer TEXT NOT NULL,
-    paid REAL NOT NULL,
-    normal_price REAL,
-    kind TEXT NOT NULL DEFAULT 'error',
-    outcome TEXT NOT NULL DEFAULT 'pending',
-    ordered_at INTEGER NOT NULL,
-    notes TEXT
 );
 
 CREATE TABLE IF NOT EXISTS alerts (
@@ -58,6 +45,8 @@ class Store:
         self.db.row_factory = sqlite3.Row
         self.db.executescript(SCHEMA)
         self.db.commit()
+        ledger.init(self.db)
+        self.migrated = ledger.migrate_outcomes(self.db)
         self.fresh = first
 
     def record(self, item_id, source, price, available, url, when=None):
@@ -107,22 +96,6 @@ class Store:
             (uid, feed, title, int(time.time())))
         self.db.commit()
         return True
-
-    def log_outcome(self, what, retailer, paid, normal_price, kind, notes):
-        cur = self.db.execute(
-            "INSERT INTO outcomes (what, retailer, paid, normal_price, kind, ordered_at, notes)"
-            " VALUES (?,?,?,?,?,?,?)",
-            (what, retailer, paid, normal_price, kind, int(time.time()), notes))
-        self.db.commit()
-        return cur.lastrowid
-
-    def set_outcome(self, row_id, outcome):
-        cur = self.db.execute("UPDATE outcomes SET outcome=? WHERE id=?", (outcome, row_id))
-        self.db.commit()
-        return cur.rowcount
-
-    def outcomes(self):
-        return list(self.db.execute("SELECT * FROM outcomes ORDER BY ordered_at DESC"))
 
     def log_alert(self, item_id, source, price, rule):
         self.db.execute(
